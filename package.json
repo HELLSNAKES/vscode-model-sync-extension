@@ -1,0 +1,118 @@
+{
+  "name": "vscode-model-sync",
+  "displayName": "VS Code Model Sync",
+  "description": "Sync OpenAI-compatible models into VS Code's chatLanguageModels.json",
+  "version": "0.0.2",
+  "publisher": "local-publisher",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "openai",
+    "models",
+    "chat",
+    "language models",
+    "sync"
+  ],
+  "activationEvents": [
+    "onView:modelSyncView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "modelSyncContainer",
+          "title": "Model Sync",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "modelSyncContainer": [
+        {
+          "type": "webview",
+          "id": "modelSyncView",
+          "name": "Đồng bộ mô hình"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "modelSync.syncNow",
+          "when": "view == modelSyncView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "modelSync.open",
+        "title": "Open Model Sync Panel",
+        "category": "Model Sync",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "modelSync.syncNow",
+        "title": "Sync Models Now",
+        "category": "Model Sync",
+        "icon": "$(cloud-download)"
+      }
+    ],
+    "configuration": {
+      "title": "Model Sync",
+      "properties": {
+        "modelSync.baseUrl": {
+          "type": "string",
+          "default": "https://dc-ai.dabeecao.org",
+          "description": "OpenAI-compatible API base URL."
+        },
+        "modelSync.dryRun": {
+          "type": "boolean",
+          "default": false,
+          "description": "Preview changes without writing to disk."
+        },
+        "modelSync.prune": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove stale models that no longer exist on the endpoint."
+        },
+        "modelSync.includeImageModels": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include image generation models (flux, stable-diffusion, etc.)."
+        },
+        "modelSync.forceKeep": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Model IDs to always keep during pruning."
+        },
+        "modelSync.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Override path to chatLanguageModels.json. Leave empty to auto-detect."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
+    "typescript": "^5.4.0"
+  }
+}
