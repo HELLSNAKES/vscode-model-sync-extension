@@ -17,11 +17,118 @@ export const DEFAULT_MODEL_PROPS = {
   maxOutputTokens: 16000,
 } as const;
 
-export const DEFAULT_IMAGE_MODEL_KEYWORDS = [
+export const DEFAULT_NON_TEXT_MODEL_KEYWORDS = [
   "image",
   "flux",
   "stable-diffusion",
+  "tts",
+  "whisper",
+  "cosyvoice",
+  "bark",
+  "speech",
+  "audio",
+  "musicgen",
+  "suno",
+  "dall-e",
+  "dalle",
+  "sdxl",
+  "kolors",
+  "midjourney",
 ] as const;
+
+export const DEFAULT_IMAGE_MODEL_KEYWORDS = DEFAULT_NON_TEXT_MODEL_KEYWORDS;
+
+/**
+ * Format a model ID or raw slug (e.g. "gemini-2.5-flash-lite") into a
+ * clean, human-readable display title (e.g. "Gemini 2.5 Flash Lite").
+ */
+export function formatModelId(id: string): string {
+  if (!id) {
+    return "";
+  }
+
+  // Brand and special term mapping
+  const SPECIAL_TOKENS: Record<string, string> = {
+    gpt: "GPT",
+    tts: "TTS",
+    llm: "LLM",
+    deepseek: "DeepSeek",
+    qwen: "Qwen",
+    glm: "GLM",
+    yi: "Yi",
+    db: "DB",
+    api: "API",
+    sdxl: "SDXL",
+    dalle: "DALL-E",
+    "dall-e": "DALL-E",
+    gemini: "Gemini",
+    claude: "Claude",
+    llama: "Llama",
+    mistral: "Mistral",
+    whisper: "Whisper",
+    cosyvoice: "CosyVoice",
+    bark: "Bark",
+    flux: "Flux",
+    gemma: "Gemma",
+    phi: "Phi",
+    coder: "Coder",
+    instruct: "Instruct",
+    flash: "Flash",
+    lite: "Lite",
+    pro: "Pro",
+    sonnet: "Sonnet",
+    haiku: "Haiku",
+    opus: "Opus",
+    preview: "Preview",
+    turbo: "Turbo",
+    schnell: "Schnell",
+    large: "Large",
+    medium: "Medium",
+    small: "Small",
+    mini: "Mini",
+    nano: "Nano",
+    vision: "Vision",
+    audio: "Audio",
+    speech: "Speech",
+    suno: "Suno",
+    musicgen: "MusicGen",
+  };
+
+  // If input already contains spaces and uppercase letters, keep as is
+  if (/\s/.test(id) && /[A-Z]/.test(id)) {
+    return id;
+  }
+
+  // Tokenize by hyphens, underscores, slashes, or spaces
+  const tokens = id.split(/[-_/ ]+/).filter(Boolean);
+
+  const formattedTokens = tokens.map((token) => {
+    const lower = token.toLowerCase();
+
+    if (SPECIAL_TOKENS[lower]) {
+      return SPECIAL_TOKENS[lower];
+    }
+
+    // Version numbers like 2.5, 3.5
+    if (/^\d+(\.\d+)*$/.test(token)) {
+      return token;
+    }
+
+    // Size parameters like 70b, 32b, 300m, 128k
+    if (/^\d+[bBmMkK]$/.test(token)) {
+      return token.slice(0, -1) + token.slice(-1).toUpperCase();
+    }
+
+    // Version prefixes like v3, v0.2
+    if (/^v\d+(\.\d+)*$/i.test(token)) {
+      return "v" + token.slice(1);
+    }
+
+    return token.charAt(0).toUpperCase() + token.slice(1);
+  });
+
+  return formattedTokens.join(" ");
+}
 
 export interface ModelEntry {
   id: string;
@@ -48,6 +155,7 @@ export class SyncResult {
   unchanged: string[] = [];
   removed: string[] = [];
   skippedImageModels: string[] = [];
+  modelDetails: Record<string, Partial<ModelEntry>> = {};
   providerName = "";
   providerUrl = "";
   totalFetched = 0;
@@ -288,10 +396,10 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
     log(`Found ${fetched.length} models.`);
 
     if (!includeImageModels) {
-      const filtered = filterImageModels(fetched, DEFAULT_IMAGE_MODEL_KEYWORDS);
+      const filtered = filterImageModels(fetched, DEFAULT_NON_TEXT_MODEL_KEYWORDS);
       fetched = filtered.kept;
       result.skippedImageModels = filtered.skipped;
-      log(`Filtered out ${filtered.skipped.length} image model(s).`);
+      log(`Filtered out ${filtered.skipped.length} non-text model(s) (image/audio).`);
       for (const mid of filtered.skipped) {
         log(`  - ${mid}`);
       }
@@ -340,13 +448,21 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
     for (const m of fetched) {
       const mid = String(m.id);
       const props = extractModelProps(m);
-      const modelName = (m.name as string) || mid;
+      const rawName = (typeof m.name === "string" && m.name.trim()) ? m.name : mid;
+      const modelName = formatModelId(rawName);
+
+      result.modelDetails[mid] = {
+        id: mid,
+        name: modelName,
+        ...DEFAULT_MODEL_PROPS,
+        ...props,
+      };
 
       const entry = existing.get(mid);
       if (entry) {
         let changed = false;
 
-        if (entry.name !== modelName && "name" in m) {
+        if (entry.name !== modelName) {
           entry.name = modelName;
           changed = true;
         }

@@ -85,7 +85,7 @@
         "modelSync.includeImageModels": {
           "type": "boolean",
           "default": false,
-          "description": "Include image generation models (flux, stable-diffusion, etc.)."
+          "description": "Include non-text models (image generation, TTS, Whisper audio, etc.)."
         },
         "modelSync.forceKeep": {
           "type": "array",
@@ -99,6 +99,11 @@
           "type": "string",
           "default": "",
           "description": "Override path to chatLanguageModels.json. Leave empty to auto-detect."
+        },
+        "modelSync.autoSyncOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically run model sync when VS Code opens."
         }
       }
     }
