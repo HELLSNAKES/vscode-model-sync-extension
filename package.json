@@ -2,7 +2,7 @@
   "name": "vscode-model-sync",
   "displayName": "VS Code Model Sync",
   "description": "Sync OpenAI-compatible models into VS Code's chatLanguageModels.json",
-  "version": "1.0",
+  "version": "1.0.0",
   "publisher": "local-publisher",
   "license": "MIT",
   "engines": {
