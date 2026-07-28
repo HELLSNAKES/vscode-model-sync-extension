@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import {
   DEFAULT_BASE_URL,
+  fetchModels,
   getConfigPath,
   runSync,
   SyncResult,
@@ -93,6 +94,16 @@ export function activate(context: vscode.ExtensionContext) {
     }
   };
 
+  // ── auto-sync on startup if enabled ──────────────────────────────────
+  const cfg = vscode.workspace.getConfiguration("modelSync");
+  if (cfg.get<boolean>("autoSyncOnStartup", false)) {
+    void getState().then((s) => {
+      if (s.baseUrl && s.apiKey) {
+        void doSync(s, () => {});
+      }
+    });
+  }
+
   // ── sidebar webview provider ───────────────────────────────────────────
   const provider = new (class implements vscode.WebviewViewProvider {
     private view?: vscode.WebviewView;
@@ -143,6 +154,32 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand("workbench.action.reloadWindow");
             break;
           }
+          case "testConnection": {
+            const { baseUrl, apiKey } = message;
+            if (!baseUrl || !apiKey) {
+              post({
+                command: "testResult",
+                success: false,
+                error: "Vui lòng nhập Base URL và Khoá API trước khi thử.",
+              });
+              break;
+            }
+            try {
+              const models = await fetchModels(baseUrl, apiKey);
+              post({
+                command: "testResult",
+                success: true,
+                count: models.length,
+              });
+            } catch (e) {
+              post({
+                command: "testResult",
+                success: false,
+                error: String(e instanceof Error ? e.message : e),
+              });
+            }
+            break;
+          }
           case "sync": {
             const current: WebviewState = {
               ...(await getState()),
@@ -158,9 +195,13 @@ export function activate(context: vscode.ExtensionContext) {
               command: "syncEnd",
               success: result.success,
               error: result.error,
-              added: result.added.length,
-              updated: result.updated.length,
-              removed: result.removed.length,
+              added: result.added,
+              updated: result.updated,
+              removed: result.removed,
+              skippedImageModels: result.skippedImageModels,
+              modelDetails: result.modelDetails,
+              totalFetched: result.totalFetched,
+              providerName: result.providerName,
               dryRun: current.dryRun,
             });
             if (result.success) {
